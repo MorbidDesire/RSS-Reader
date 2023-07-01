@@ -13,18 +13,14 @@ yup.setLocale({
 const urlSchema = (string().url());
 
 const state = {
-  currentUrl: '',
-  validateError: '',
+  urls: [],
+  error: '',
   feeds: [],
   posts: [],
 };
 
-const watchedState = onChange(state, (path, value) => {
-  if (path === 'currentUrl') {
-    state.currentUrl = value;
-  } else {
-    render(state);
-  }
+const watchedState = onChange(state, (path, value, previousValue) => {
+  render(state);
 });
 
 const postsSelection = (url) => {
@@ -33,20 +29,27 @@ const postsSelection = (url) => {
     .then((data) => data.contents)
     .then((text) => parser(text))
     .then((doc) => {
+      const feedsCount = state.feeds.length;
+      let postsCount = feedsCount * 100;
       const feedTitle = doc.body.querySelector('title').textContent;
       const feedDescription = doc.body.querySelector('description').textContent;
-      watchedState.feeds.push({ feedTitle, feedDescription });
+      const feedId = feedsCount + 1;
+      watchedState.feeds.push({ feedTitle, feedDescription, feedId });
       const posts = doc.querySelectorAll('item');
       posts.forEach((post) => {
         const postTitle = post.querySelector('title').textContent;
         const postDescription = post.querySelector('description').textContent;
-        const postLink = post.querySelector('link').textContent;
-        watchedState.posts.push({ postTitle, postDescription, postLink });
+        const linkElement = post.querySelector('link');
+        const postLink = linkElement.nextSibling.textContent.trim();
+        const postId = postsCount + 1;
+        postsCount += 1;
+        watchedState.posts.push({
+          postTitle, postDescription, postLink, postId,
+        });
       });
-      // watchedState.validateError = 'none';
     })
     .catch(() => {
-      watchedState.validateError = 'parseError';
+      watchedState.error = 'parseError';
     });
 };
 
@@ -56,21 +59,20 @@ const app = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const urlName = formData.get('url');
-    if (urlName === state.currentUrl) {
-      watchedState.validateError = 'validate.errors.urlRepeatable';
-      return;
-    }
     urlSchema.validate(urlName)
       .then((response) => {
-        watchedState.currentUrl = response;
-      })
-      .then(() => {
-        postsSelection(urlName);
+        // watchedState.urls.push(response);
+        if (state.urls.includes(response)) {
+          watchedState.error = 'validate.errors.urlRepeatable';
+        } else {
+          state.error = '';
+          state.urls.push(response);
+          postsSelection(urlName);
+        }
       })
       .catch((error) => {
-        watchedState.validateError = error.message;
+        watchedState.error = error.message;
       });
-    // .catch((response) => console.log('error', response));
   });
 };
 
