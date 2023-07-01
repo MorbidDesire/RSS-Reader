@@ -17,6 +17,26 @@ const render = (state) => {
     paragraph.classList.add('text-success');
     form.reset();
     input.focus();
+
+    // отрисовка фида
+    const feedsContainer = document.querySelector('.feeds');
+    const feedsTitle = feedsContainer.querySelector('.card-title');
+    feedsTitle.textContent = 'Фиды';
+    const feedsList = feedsContainer.querySelector('.list-group');
+    feedsList.innerHTML = '';
+
+    state.feeds.forEach(({ feedTitle, feedDescription }) => {
+      const feed = document.createElement('li');
+      feed.classList.add('list-group-item', 'border-0', 'border-end-0');
+      const title = document.createElement('h6');
+      const description = document.createElement('p');
+      title.classList.add('m-0');
+      title.textContent = feedTitle;
+      description.classList.add('m-0', 'small', 'text-black-50');
+      description.textContent = feedDescription;
+      feed.append(title, description);
+      feedsList.prepend(feed);
+    });
   }
 };
 
