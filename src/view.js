@@ -34,38 +34,42 @@ const handleProcessState = (state) => {
   }
 };
 
-const render = (state) => {
+const render = (state, content) => {
   // отрисовка фида
-  const feedsContainer = document.querySelector('.feeds');
-  const feedsTitle = feedsContainer.querySelector('.card-title');
-  feedsTitle.textContent = 'Фиды';
-  const feedsList = feedsContainer.querySelector('.list-group');
-  feedsList.innerHTML = '';
+  if (content === 'feeds') {
+    const feedsContainer = document.querySelector('.feeds');
+    const feedsTitle = feedsContainer.querySelector('.card-title');
+    feedsTitle.textContent = 'Фиды';
+    const feedsList = feedsContainer.querySelector('.list-group');
+    feedsList.innerHTML = '';
 
-  const postsContainer = document.querySelector('.posts');
-  const postsTitle = postsContainer.querySelector('.card-title');
-  postsTitle.textContent = 'Посты';
-  const postsList = postsContainer.querySelector('.list-group');
-  postsList.innerHTML = '';
-
-  state.content.forEach(({
-    feedTitle, feedDescription, feedPosts,
-  }) => {
-    const feed = document.createElement('li');
-    feed.classList.add('list-group-item', 'border-0', 'border-end-0');
-    const title = document.createElement('h6');
-    const description = document.createElement('p');
-    title.classList.add('m-0');
-    title.textContent = feedTitle;
-    description.classList.add('m-0', 'small', 'text-black-50');
-    description.textContent = feedDescription;
-    feed.append(title, description);
-    feedsList.prepend(feed);
-
-    feedPosts.forEach(({
-      postTitle, postDescription, postLink, postId,
+    state.feeds.forEach(({
+      feedTitle, feedDescription,
     }) => {
-      const watchedPostClass = state.uiState.watchedPosts.includes(postId.toString()) ? 'fw-normal' : 'fw-bold';
+      const feed = document.createElement('li');
+      feed.classList.add('list-group-item', 'border-0', 'border-end-0');
+      const title = document.createElement('h6');
+      const description = document.createElement('p');
+      title.classList.add('m-0');
+      title.textContent = feedTitle;
+      description.classList.add('m-0', 'small', 'text-black-50');
+      description.textContent = feedDescription;
+      feed.append(title, description);
+      feedsList.prepend(feed);
+    });
+  }
+  if (content === 'posts') {
+    // отрисовка постов
+    const postsContainer = document.querySelector('.posts');
+    const postsTitle = postsContainer.querySelector('.card-title');
+    postsTitle.textContent = 'Посты';
+    const postsList = postsContainer.querySelector('.list-group');
+    postsList.innerHTML = '';
+
+    state.posts.forEach(({
+      postTitle, postLink, postId,
+    }) => {
+      const watchedPostClass = state.uiState.watchedPosts.includes(postLink) ? 'fw-normal' : 'fw-bold';
       const post = document.createElement('li');
       post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
       const link = document.createElement('a');
@@ -75,7 +79,17 @@ const render = (state) => {
       link.outerHTML = `<a href="${postLink}" class=${watchedPostClass} data-id="${postId}" target="_blank" rel="noopener noreferrer">${postTitle}</a>`;
       postsList.append(post);
     });
-  });
+  }
+  if (content === 'modalPost') {
+    const { postTitle, postDescription, postLink } = state.modalPost;
+    const modalTitle = document.querySelector('.modal-title');
+    const modalBody = document.querySelector('.modal-body');
+    const fullArticle = document.querySelector('.full-article');
+
+    modalTitle.textContent = postTitle;
+    modalBody.textContent = postDescription;
+    fullArticle.setAttribute('href', postLink);
+  }
 };
 
 export { render, handleProcessState };
