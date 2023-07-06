@@ -1,67 +1,84 @@
 import i18n from './init.js';
 
-const render = (state) => {
+const handleProcessState = (state) => {
+  const { error } = state;
   const form = document.querySelector('form');
   const input = document.querySelector('input');
   const paragraph = document.querySelector('.feedback');
-  const { error } = state;
-  if (error) {
-    input.classList.add('is-invalid');
-    paragraph.textContent = i18n.t(`${error}`);
-    paragraph.classList.remove('text-success');
-    paragraph.classList.add('text-danger');
-  } else {
-    // отрисовка фида
-    const feedsContainer = document.querySelector('.feeds');
-    const feedsTitle = feedsContainer.querySelector('.card-title');
-    feedsTitle.textContent = 'Фиды';
-    const feedsList = feedsContainer.querySelector('.list-group');
-    feedsList.innerHTML = '';
+  const submitButton = document.querySelector('button[type="submit"]');
+  switch (state.isValid) {
+    case 'done':
+      paragraph.textContent = i18n.t('validate.loadSuccess');
+      input.classList.remove('is-invalid');
+      paragraph.classList.remove('text-danger');
+      paragraph.classList.add('text-success');
+      form.reset();
+      input.focus();
+      submitButton.disabled = false;
+      break;
 
-    const postsContainer = document.querySelector('.posts');
-    const postsTitle = postsContainer.querySelector('.card-title');
-    postsTitle.textContent = 'Посты';
-    const postsList = postsContainer.querySelector('.list-group');
-    postsList.innerHTML = '';
+    case 'error':
+      input.classList.add('is-invalid');
+      paragraph.textContent = i18n.t(`${error}`);
+      paragraph.classList.remove('text-success');
+      paragraph.classList.add('text-danger');
+      submitButton.disabled = false;
+      break;
 
-    state.content.forEach(({
-      feedTitle, feedDescription, feedPosts, feedUrl,
-    }) => {
-      const feed = document.createElement('li');
-      feed.classList.add('list-group-item', 'border-0', 'border-end-0');
-      const title = document.createElement('h6');
-      const description = document.createElement('p');
-      title.classList.add('m-0');
-      title.textContent = feedTitle;
-      description.classList.add('m-0', 'small', 'text-black-50');
-      description.textContent = feedDescription;
-      feed.append(title, description);
-      feedsList.prepend(feed);
-      if (feedPosts.length !== 0) {
-        feedPosts.forEach(({
-          postTitle, postDescription, postLink,
-        }) => {
-          const post = document.createElement('li');
-          post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
-          const link = document.createElement('a');
-          const button = document.createElement('button');
-          post.append(link, button);
-          button.outerHTML = `<button type="button" class="btn btn-outline-primary btn-sm" data-id="${feedUrl}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>`;
-          link.outerHTML = `<a href="${postLink}" class="fw-bold" data-id="${feedUrl} target="_blank" rel="noopener noreferrer">${postTitle}</a>`;
-          postsList.prepend(post);
-        });
-      }
-    });
-    paragraph.textContent = i18n.t('validate.loadSuccess');
-    input.classList.remove('is-invalid');
-    paragraph.classList.remove('text-danger');
-    paragraph.classList.add('text-success');
-    form.reset();
-    input.focus();
+    case 'sending':
+      submitButton.disabled = true;
+      break;
+
+    default:
+      break;
   }
 };
 
-export default render;
+const render = (state) => {
+  // отрисовка фида
+  const feedsContainer = document.querySelector('.feeds');
+  const feedsTitle = feedsContainer.querySelector('.card-title');
+  feedsTitle.textContent = 'Фиды';
+  const feedsList = feedsContainer.querySelector('.list-group');
+  feedsList.innerHTML = '';
+
+  const postsContainer = document.querySelector('.posts');
+  const postsTitle = postsContainer.querySelector('.card-title');
+  postsTitle.textContent = 'Посты';
+  const postsList = postsContainer.querySelector('.list-group');
+  postsList.innerHTML = '';
+
+  state.content.forEach(({
+    feedTitle, feedDescription, feedPosts,
+  }) => {
+    const feed = document.createElement('li');
+    feed.classList.add('list-group-item', 'border-0', 'border-end-0');
+    const title = document.createElement('h6');
+    const description = document.createElement('p');
+    title.classList.add('m-0');
+    title.textContent = feedTitle;
+    description.classList.add('m-0', 'small', 'text-black-50');
+    description.textContent = feedDescription;
+    feed.append(title, description);
+    feedsList.prepend(feed);
+
+    feedPosts.forEach(({
+      postTitle, postDescription, postLink, postId,
+    }) => {
+      const watchedPostClass = state.uiState.watchedPosts.includes(postId.toString()) ? 'fw-normal' : 'fw-bold';
+      const post = document.createElement('li');
+      post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
+      const link = document.createElement('a');
+      const button = document.createElement('button');
+      post.append(link, button);
+      button.outerHTML = `<button type="button" class="btn btn-outline-primary btn-sm" data-id="${postId}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>`;
+      link.outerHTML = `<a href="${postLink}" class=${watchedPostClass} data-id="${postId}" target="_blank" rel="noopener noreferrer">${postTitle}</a>`;
+      postsList.append(post);
+    });
+  });
+};
+
+export { render, handleProcessState };
 
 // отрисовка постов
 // const postsContainer = document.querySelector('.posts');
