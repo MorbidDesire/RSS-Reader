@@ -1,4 +1,5 @@
 import onChange from 'on-change';
+import axios from 'axios';
 import * as yup from 'yup';
 import { string } from 'yup';
 import _ from 'lodash';
@@ -11,7 +12,9 @@ yup.setLocale({
   },
 });
 
-const urlSchema = (string().url());
+const urlSchema = (string().url().nullable());
+
+let timerId = '';
 
 const state = {
   urls: [],
@@ -24,8 +27,6 @@ const state = {
   },
   modalPost: '',
 };
-
-let timerId = '';
 
 const watchedState = onChange(state, (path) => {
   switch (path) {
@@ -58,7 +59,7 @@ const responseDocument = (url, doc, initialState) => {
 
   // проверка на повторение URL
   if (!initialState.urls.includes(url)) {
-    // привязка постов к id
+    // привязка фида к id
     const feedsCount = initialState.feeds.length;
     const postsCount = feedsCount * 100;
     const feedId = postsCount;
@@ -77,9 +78,8 @@ const responseDocument = (url, doc, initialState) => {
   // проверка на новые посты
   // if (postsCount > currentFeed.feedPosts.length) {
   // делаем отрисовку заново
-  // console.log('Возможная отрисовка');
 
-  state.posts = [];
+  // state.posts = [];
   posts.forEach((post) => {
     const postTitle = post.querySelector('title').textContent;
     const postDescription = post.querySelector('description').textContent;
@@ -101,16 +101,31 @@ const responseDocument = (url, doc, initialState) => {
 };
 
 const postsSelection = (url) => {
-  fetch(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
-    .then((response) => response.json())
+  axios({
+    method: 'get',
+    url: `https://allorigins.hexlet.app/get?disableCache=true&url=${url}`,
+    timeout: 10000,
+  })
+    .then((response) => response.data)
     .then((data) => data.contents)
     .then((text) => parser(text))
     .then((doc) => {
       responseDocument(url, doc, state);
     })
-    .catch(() => {
-      state.error = 'parseError';
-      watchedState.isValid = 'error';
+    .catch((error) => {
+      switch (error.name) {
+        case 'TypeError':
+          state.error = 'validate.errors.invalidRss';
+          watchedState.isValid = 'error';
+          break;
+        case 'AxiosError':
+          state.error = 'validate.errors.networkError';
+          watchedState.isValid = 'error';
+          break;
+        default:
+          break;
+      }
+      console.log(error);
     });
 };
 
@@ -150,34 +165,38 @@ const app = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const urlName = formData.get('url');
-    urlSchema.validate(urlName).then((response) => {
-      if (state.urls.includes(response)) {
-        state.error = 'validate.errors.urlRepeatable';
-        watchedState.isValid = 'error';
-      } else {
-        state.error = '';
-        watchedState.isValid = 'sending';
-        postsSelection(urlName);
-        clearTimeout(timerId);
-        timerId = setTimeout(function innerFunc() {
-          state.feeds.forEach(({ feedUrl }) => {
-            postsSelection(feedUrl);
-          });
-          timerId = setTimeout(innerFunc, 5000);
-        }, 5000);
-      }
-    })
-      .catch((error) => {
-        state.error = error.message;
-        watchedState.isValid = 'error';
-      });
+    if (!urlName) {
+      state.error = 'validate.errors.emptyUrl';
+      watchedState.isValid = 'error';
+    } else {
+      urlSchema.validate(urlName).then((response) => {
+        if (state.urls.includes(response)) {
+          state.error = 'validate.errors.urlRepeatable';
+          watchedState.isValid = 'error';
+        } else {
+          state.error = '';
+          watchedState.isValid = 'sending';
+          postsSelection(urlName);
+          // clearTimeout(timerId);
+          // timerId = setTimeout(function innerFunc() {
+          //   state.feeds.forEach(({ feedUrl }) => {
+          //     postsSelection(feedUrl);
+          //   });
+          //   timerId = setTimeout(innerFunc, 5000);
+          // }, 5000);
+        }
+      })
+        .catch((error) => {
+          state.error = error.message;
+          watchedState.isValid = 'error';
+        });
+    }
   });
   const postsList = document.querySelector('.list-group');
   postsList.addEventListener('click', (e) => {
     const button = e.target;
     const link = button.previousSibling;
     const watchedPostLink = link.getAttribute('href');
-    console.log(watchedPostLink)
     const watchedPostId = button.getAttribute('data-id');
     const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
     watchedState.modalPost = state.posts.find(findPost);
@@ -186,3 +205,18 @@ const app = () => {
 };
 
 export default app;
+
+// запрос через fetch
+// const postsSelection = (url) => {
+//   fetch(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+//     // .then((response) => response.json())
+//     // .then((data) => data.contents)
+//     // .then((text) => parser(text))
+//     // .then((doc) => {
+//     //   responseDocument(url, doc, state);
+//     // })
+//     // .catch(() => {
+//     //   state.error = 'parseError';
+//     //   watchedState.isValid = 'error';
+//     // });
+// };
