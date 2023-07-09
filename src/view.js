@@ -66,9 +66,7 @@ const render = (state, content) => {
       const postsList = postsContainer.querySelector('.list-group');
       postsList.innerHTML = '';
 
-      state.posts.forEach(({
-        postTitle, postLink, postId,
-      }) => {
+      state.posts.forEach(({ postTitle, postLink, postId }) => {
         const watchedPostClass = state.uiState.watchedPosts.includes(postLink) ? 'fw-normal' : 'fw-bold';
         const post = document.createElement('li');
         post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
@@ -77,7 +75,7 @@ const render = (state, content) => {
         post.append(link, button);
         button.outerHTML = `<button type="button" class="btn btn-outline-primary btn-sm" data-id="${postId}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>`;
         link.outerHTML = `<a href="${postLink}" class=${watchedPostClass} data-id="${postId}" target="_blank" rel="noopener noreferrer">${postTitle}</a>`;
-        postsList.append(post);
+        postsList.prepend(post);
       });
       break;
     }

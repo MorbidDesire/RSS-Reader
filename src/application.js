@@ -14,8 +14,6 @@ yup.setLocale({
 
 const urlSchema = (string().url().nullable());
 
-let timerId = '';
-
 const state = {
   urls: [],
   isValid: '',
@@ -46,6 +44,7 @@ const watchedState = onChange(state, (path) => {
       render(state, 'modalPost');
       break;
     default:
+      console.log('hey');
       break;
   }
 });
@@ -54,29 +53,28 @@ const responseDocument = (url, doc, initialState) => {
   const feedTitle = doc.body.querySelector('title').textContent;
   const feedDescription = doc.body.querySelector('description').textContent;
   const posts = doc.querySelectorAll('item');
+  const postsCount = posts.length;
   const feedUrl = url;
-  // const feedPosts = [];
 
   // проверка на повторение URL
   if (!initialState.urls.includes(url)) {
     // привязка фида к id
     const feedsCount = initialState.feeds.length;
-    const postsCount = feedsCount * 100;
-    const feedId = postsCount;
+    const postsArea = feedsCount * 100;
+    const feedId = postsArea;
     initialState.urls.push(url);
     watchedState.isValid = 'done';
     watchedState.feeds.push({
-      feedTitle, feedDescription, feedId, feedUrl,
+      feedTitle, feedDescription, feedId, feedUrl, postsCount,
     });
   }
-
   const findFeed = (obj) => (_.get(obj, 'feedUrl') === url);
 
   const currentFeed = initialState.feeds.find(findFeed);
 
   let postId = currentFeed.feedId;
   // проверка на новые посты
-  // if (postsCount > currentFeed.feedPosts.length) {
+
   // делаем отрисовку заново
 
   // state.posts = [];
@@ -85,17 +83,38 @@ const responseDocument = (url, doc, initialState) => {
     const postDescription = post.querySelector('description').textContent;
     const linkElement = post.querySelector('link');
     const postLink = linkElement.nextSibling.textContent.trim();
-    watchedState.posts.push({
+    watchedState.posts.unshift({
       postTitle, postDescription, postLink, postId,
     });
     postId += 1;
   });
+
+  // console.log(postsCount, currentFeed.postsCount);
+  // if (postsCount > currentFeed.postsCount) {
+  //   // проверка на новые посты
+
+  //   // posts.forEach((post) => {
+  //   //   const postTitle = post.querySelector('title').textContent;
+  //   //   const postDescription = post.querySelector('description').textContent;
+  //   //   const linkElement = post.querySelector('link');
+  //   //   const postLink = linkElement.nextSibling.textContent.trim();
+  //   //   watchedState.posts.unshift({
+  //   //     postTitle, postDescription, postLink,
+  //   //   });
+  //   //   // postId += 1;
+  //   // });
+  // }
+
   // const buttons = document.querySelectorAll('.btn-sm');
   // buttons.forEach((button) => {
   //   button.addEventListener('click', () => {
   //     console.log(button);
+  //     const link = button.previousSibling;
+  //     const watchedPostLink = link.getAttribute('href');
   //     const watchedPostId = button.getAttribute('data-id');
-  //     watchedState.uiState.watchedPosts.push(watchedPostId);
+  //     const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
+  //     watchedState.modalPost = state.posts.find(findPost);
+  //     watchedState.uiState.watchedPosts.push(watchedPostLink);
   //   });
   // });
 };
@@ -158,6 +177,17 @@ const postsSelection = (url) => {
 //     })
 //     .catch((error) => console.log(error));
 // };
+let timerId = '';
+const cycle = () => {
+  clearTimeout(timerId);
+  timerId = setTimeout(function innerFunc() {
+    state.posts = [];
+    state.feeds.forEach(({ feedUrl }) => {
+      postsSelection(feedUrl);
+    });
+    timerId = setTimeout(innerFunc, 5000);
+  }, 5000);
+};
 
 const app = () => {
   const form = document.querySelector('form');
@@ -177,6 +207,7 @@ const app = () => {
           state.error = '';
           watchedState.isValid = 'sending';
           postsSelection(urlName);
+          cycle();
           // clearTimeout(timerId);
           // timerId = setTimeout(function innerFunc() {
           //   state.feeds.forEach(({ feedUrl }) => {
@@ -194,29 +225,17 @@ const app = () => {
   });
   const postsList = document.querySelector('.list-group');
   postsList.addEventListener('click', (e) => {
-    const button = e.target;
+    const post = e.target.closest('.list-group-item');
+    const button = post.querySelector('button');
     const link = button.previousSibling;
-    const watchedPostLink = link.getAttribute('href');
-    const watchedPostId = button.getAttribute('data-id');
-    const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
-    watchedState.modalPost = state.posts.find(findPost);
-    watchedState.uiState.watchedPosts.push(watchedPostLink);
+    if (e.target === button || e.target === link) {
+      const watchedPostLink = link.getAttribute('href');
+      const watchedPostId = button.getAttribute('data-id');
+      const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
+      watchedState.modalPost = state.posts.find(findPost);
+      watchedState.uiState.watchedPosts.push(watchedPostLink);
+    }
   });
 };
 
 export default app;
-
-// запрос через fetch
-// const postsSelection = (url) => {
-//   fetch(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
-//     // .then((response) => response.json())
-//     // .then((data) => data.contents)
-//     // .then((text) => parser(text))
-//     // .then((doc) => {
-//     //   responseDocument(url, doc, state);
-//     // })
-//     // .catch(() => {
-//     //   state.error = 'parseError';
-//     //   watchedState.isValid = 'error';
-//     // });
-// };
