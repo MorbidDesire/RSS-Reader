@@ -96,8 +96,6 @@ const responseDocument = (url, doc, initialState) => {
     render(state, 'content');
   }
 
-  // let postId = currentFeed.feedId;
-
   // console.log(postsCount, currentFeed.postsCount);
   // if (postsCount > currentFeed.postsCount) {
   //   // проверка на новые посты
