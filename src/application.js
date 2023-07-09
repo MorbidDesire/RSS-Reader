@@ -30,9 +30,6 @@ const watchedState = onChange(state, (path) => {
     case 'isValid':
       handleProcessState(state);
       break;
-    case 'feeds':
-      render(state, 'feeds');
-      break;
     case 'content':
       render(state, 'content');
       break;
@@ -95,36 +92,34 @@ const responseDocument = (url, doc, initialState) => {
     currentFeed.feedPosts = feedPosts;
     render(state, 'content');
   }
-
-  // console.log(postsCount, currentFeed.postsCount);
-  // if (postsCount > currentFeed.postsCount) {
-  //   // проверка на новые посты
-
-  //   // posts.forEach((post) => {
-  //   //   const postTitle = post.querySelector('title').textContent;
-  //   //   const postDescription = post.querySelector('description').textContent;
-  //   //   const linkElement = post.querySelector('link');
-  //   //   const postLink = linkElement.nextSibling.textContent.trim();
-  //   //   watchedState.posts.unshift({
-  //   //     postTitle, postDescription, postLink,
-  //   //   });
-  //   //   // postId += 1;
-  //   // });
-  // }
-
-  // const buttons = document.querySelectorAll('.btn-sm');
-  // buttons.forEach((button) => {
-  //   button.addEventListener('click', () => {
-  //     console.log(button);
-  //     const link = button.previousSibling;
-  //     const watchedPostLink = link.getAttribute('href');
-  //     const watchedPostId = button.getAttribute('data-id');
-  //     const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
-  //     watchedState.modalPost = state.posts.find(findPost);
-  //     watchedState.uiState.watchedPosts.push(watchedPostLink);
-  //   });
-  // });
 };
+// console.log(postsCount, currentFeed.postsCount);
+// if (postsCount > currentFeed.postsCount) {
+//   // проверка на новые посты
+
+//   // posts.forEach((post) => {
+//   //   const postTitle = post.querySelector('title').textContent;
+//   //   const postDescription = post.querySelector('description').textContent;
+//   //   const linkElement = post.querySelector('link');
+//   //   const postLink = linkElement.nextSibling.textContent.trim();
+//   //   watchedState.posts.unshift({
+//   //     postTitle, postDescription, postLink,
+//   //   });
+//   //   // postId += 1;
+//   // });
+// }
+
+// const buttons = document.querySelectorAll('.btn-sm');
+// buttons.forEach((button) => {
+//   button.addEventListener('click', () => {
+//     console.log(button);
+//     const link = button.previousSibling;
+//     const watchedPostLink = link.getAttribute('href');
+//     const watchedPostId = button.getAttribute('data-id');
+//     const findPost = (obj) => (_.get(obj, 'postId') === Number(watchedPostId));
+//     watchedState.modalPost = state.posts.find(findPost);
+//     watchedState.uiState.watchedPosts.push(watchedPostLink);
+//   });
 
 const postsSelection = (url) => {
   axios({
@@ -185,7 +180,7 @@ const postsSelection = (url) => {
 //     .catch((error) => console.log(error));
 // };
 let timerId = '';
-const cycle = () => {
+const checkFeed = () => {
   clearTimeout(timerId);
   timerId = setTimeout(function innerFunc() {
     state.content.forEach(({ feedUrl }) => {
@@ -213,7 +208,7 @@ const app = () => {
           state.error = '';
           watchedState.isValid = 'sending';
           postsSelection(urlName);
-          cycle();
+          checkFeed();
           // clearTimeout(timerId);
           // timerId = setTimeout(function innerFunc() {
           //   state.feeds.forEach(({ feedUrl }) => {
