@@ -1,32 +1,39 @@
-import i18n from './init.js';
+/* eslint-disable no-param-reassign */
+const finishWithError = (elements, error, i18nInstance) => {
+  elements.feedback.textContent = i18nInstance.t(`validate.errors.${error}`);
+  elements.feedback.classList.remove('text-success');
+  elements.feedback.classList.add('text-danger');
 
-const handleProcessState = (state) => {
-  const { error } = state;
-  const form = document.querySelector('form');
-  const input = document.querySelector('input');
-  const paragraph = document.querySelector('.feedback');
-  const submitButton = document.querySelector('button[type="submit"]');
-  switch (state.isValid) {
+  elements.input.classList.add('is-invalid');
+  elements.input.removeAttribute('readonly');
+
+  elements.button.disabled = false;
+};
+
+const handleProcessState = (elements, state, value, i18nInstance) => {
+  switch (value) {
+    case 'filling':
+      break;
     case 'done':
-      paragraph.textContent = i18n.t('validate.loadSuccess');
-      input.classList.remove('is-invalid');
-      paragraph.classList.remove('text-danger');
-      paragraph.classList.add('text-success');
-      form.reset();
-      input.focus();
-      submitButton.disabled = false;
+      elements.feedback.textContent = i18nInstance.t('validate.loadSuccess');
+      elements.feedback.classList.remove('text-danger');
+      elements.feedback.classList.add('text-success');
+      elements.input.classList.remove('is-invalid');
+      elements.input.removeAttribute('readonly');
+      elements.input.focus();
+
+      elements.form.reset();
+
+      elements.button.disabled = false;
       break;
 
     case 'error':
-      input.classList.add('is-invalid');
-      paragraph.textContent = i18n.t(`${error}`);
-      paragraph.classList.remove('text-success');
-      paragraph.classList.add('text-danger');
-      submitButton.disabled = false;
+      finishWithError(elements, state.error, i18nInstance);
       break;
 
     case 'sending':
-      submitButton.disabled = true;
+      elements.button.disabled = true;
+      elements.input.setAttribute('readonly', 'true');
       break;
 
     default:
@@ -34,63 +41,132 @@ const handleProcessState = (state) => {
   }
 };
 
-const render = (state, content) => {
-  switch (content) {
-    case 'content': {
-    // отрисовка фида
-      const feedsContainer = document.querySelector('.feeds');
-      const feedsTitle = feedsContainer.querySelector('.card-title');
-      feedsTitle.textContent = 'Фиды';
-      const feedsList = feedsContainer.querySelector('.list-group');
-      feedsList.innerHTML = '';
+const renderPosts = (state, div, i18nInstance) => {
+  const ul = document.createElement('ul');
+  ul.classList.add('list-group', 'border-0', 'rounded-0');
 
-      const postsContainer = document.querySelector('.posts');
-      const postsTitle = postsContainer.querySelector('.card-title');
-      postsTitle.textContent = 'Посты';
-      const postsList = postsContainer.querySelector('.list-group');
-      postsList.innerHTML = '';
+  state.content.posts.forEach((post) => {
+    const { title, link, id } = post;
 
-      state.content.forEach(({
-        feedTitle, feedDescription, feedPosts, feedUrl,
-      }) => {
-        const feed = document.createElement('li');
-        feed.classList.add('list-group-item', 'border-0', 'border-end-0');
-        const title = document.createElement('h6');
-        const description = document.createElement('p');
-        title.classList.add('m-0');
-        title.textContent = feedTitle;
-        description.classList.add('m-0', 'small', 'text-black-50');
-        description.textContent = feedDescription;
-        feed.append(title, description);
-        feedsList.prepend(feed);
-        feedPosts.forEach(({ postTitle, postLink, postId }) => {
-          const watchedPostClass = state.uiState.watchedPosts.includes(postLink) ? 'fw-normal' : 'fw-bold';
-          const post = document.createElement('li');
-          post.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
-          const link = document.createElement('a');
-          const button = document.createElement('button');
-          post.append(link, button);
-          button.outerHTML = `<button type="button" class="btn btn-outline-primary btn-sm" data-id="${postId}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>`;
-          link.outerHTML = `<a href="${postLink}" class=${watchedPostClass} data-feedUrl="${feedUrl}" data-id="${postId}" target="_blank" rel="noopener noreferrer">${postTitle}</a>`;
-          postsList.prepend(post);
-        });
-      });
+    const li = document.createElement('li');
+    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
+
+    const a = document.createElement('a');
+    a.classList.add(state.uiState.watchedPostsIds.includes(id) ? ('fw-normal', 'link-secondary') : 'fw-bold');
+    a.setAttribute('href', link);
+    a.setAttribute('data-id', id);
+    a.setAttribute('target', '_blank');
+    a.setAttribute('rel', 'noopener noreferrer');
+    a.textContent = title;
+
+    const button = document.createElement('button');
+    button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
+    button.setAttribute('type', 'button');
+    button.setAttribute('data-id', id);
+    button.setAttribute('data-bs-toggle', 'modal');
+    button.setAttribute('data-bs-target', '#modal');
+    button.textContent = i18nInstance.t('button');
+
+    li.append(a, button);
+    ul.append(li);
+  });
+
+  div.append(ul);
+};
+
+const renderFeeds = (state, div) => {
+  const ul = document.createElement('ul');
+  ul.classList.add('list-group', 'border-0', 'rounded-0');
+
+  state.content.feeds.forEach((feed) => {
+    const { title, description } = feed;
+
+    const li = document.createElement('li');
+    li.classList.add('list-group-item', 'border-0', 'border-end-0');
+
+    const h3 = document.createElement('h3');
+    h3.classList.add('h6', 'm-0');
+    h3.textContent = title;
+
+    const p = document.createElement('p');
+    p.classList.add('m-0', 'small', 'text-black-50');
+    p.textContent = description;
+
+    li.append(h3, p);
+    ul.append(li);
+  });
+
+  div.append(ul);
+};
+
+const createContainer = (type, elements, state, i18nInstance) => {
+  elements[type].textContent = '';
+
+  const divCard = document.createElement('div');
+  divCard.classList.add('card', 'border-0');
+
+  const divCardBody = document.createElement('div');
+  divCardBody.classList.add('card-body');
+
+  const divCardBodyTitle = document.createElement('h2');
+  divCardBodyTitle.classList.add('card-title', 'h4');
+  divCardBodyTitle.textContent = i18nInstance.t(type);
+
+  divCardBody.append(divCardBodyTitle);
+  divCard.append(divCardBody);
+  elements[type].append(divCard);
+
+  if (type === 'posts') {
+    renderPosts(state, divCard, i18nInstance);
+  }
+
+  if (type === 'feeds') {
+    renderFeeds(state, divCard);
+  }
+};
+
+const renderModalWindow = (elements, state, postId) => {
+  const currentPost = state.content.posts.find(({ id }) => id === postId);
+  const { title, description, link } = currentPost;
+
+  elements.modal.title.textContent = title;
+  elements.modal.body.textContent = description;
+  elements.modal.button.setAttribute('href', link);
+};
+
+const render = (elements, state, i18nInstance) => (path, value) => {
+  switch (path) {
+    case 'processState': {
+      handleProcessState(elements, state, value, i18nInstance);
       break;
     }
-    case 'modalPost': {
-      const { postTitle, postDescription, postLink } = state.modalPost;
-      const modalTitle = document.querySelector('.modal-title');
-      const modalBody = document.querySelector('.modal-body');
-      const fullArticle = document.querySelector('.full-article');
 
-      modalTitle.textContent = postTitle;
-      modalBody.textContent = postDescription;
-      fullArticle.setAttribute('href', postLink);
+    case 'error': {
+      finishWithError(elements, state.error, i18nInstance);
       break;
     }
+
+    case 'content.posts': {
+      createContainer('posts', elements, state, i18nInstance);
+      break;
+    }
+
+    case 'content.feeds': {
+      createContainer('feeds', elements, state, i18nInstance);
+      break;
+    }
+
+    case 'uiState.modalPostId':
+      renderModalWindow(elements, state, value);
+      break;
+
+    case 'uiState.watchedPostsIds':
+      createContainer('posts', elements, state, i18nInstance);
+      break;
+
     default:
       break;
   }
 };
 
-export { render, handleProcessState };
+export default render;
